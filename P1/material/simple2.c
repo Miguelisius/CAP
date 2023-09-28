@@ -2,7 +2,7 @@
 #include <stdio.h>
 
 #define ARRAY_SIZE 2048
-#define NUMBER_OF_TRIALS 1000000
+#define NUMBER_OF_TRIALS 1
 
 /*
  * Statically allocate our arrays.  Compilers can
@@ -27,6 +27,6 @@ int main(int argc, char *argv[]) {
             c += m*a[i] + b[i];
         }
     }
-
+    printf("c = %f\n", c);
     return 0;
 }
