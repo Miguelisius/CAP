@@ -6,6 +6,9 @@
 #include "stb_image.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
+#include <x86intrin.h>
+#include <xmmintrin.h>
+#include <immintrin.h>
 
 static inline void getRGB(uint8_t *im, int width, int height, int nchannels, int x, int y, int *r, int *g, int *b)
 {
@@ -72,15 +75,44 @@ int main(int nargs, char **argv)
             continue;
         }
 
+        //RGB Scale
+
+        __m256 value = _mm256_setr_ps(0.2989f, 0.5870f, 0.1140f, 0.0f, 0.2989f, 0.5870f, 0.1140f, 0.0f);
+        __m256 tot; 
+        __m128i grey;
+        __m256 of = _mm256_setr_epi32(0, 4, 1, 5,0,0,0,0);
+        
+
         gettimeofday(&ini,NULL);
         // RGB to grey scale
         int r, g, b;
-        for (int i = 0; i < width; i++)
-        {
-            for (int j = 0; j < height; j++)
+        for (int j = 0; j <  height; j++)
+        {   
+            
+
+            for (int i = 0; i<width; i+=4)
             {
-                getRGB(rgb_image, width, height, 4, i, j, &r, &g, &b);
-                grey_image[j * width + i] = (int)(0.2989 * r + 0.5870 * g + 0.1140 * b);
+                __m128i datal = _mm_load1_epi64((__m128i *)(rgb_image + (i + width * j) * 4));
+                __m128i datah = _mm_load1_epi64((__m128i *)(rgb_image + (i + width * j) * 4 + 8));
+                // Convertimos a entero de 32 bits
+                __m256i data32bI = _mm256_cvtepu8_epi32(datal);
+                __m256i data32bH = _mm256_cvtepu8_epi32(datah);
+                // Convertimos a float (single precision)
+                __m256 datafloatI = _mm256_cvtepi32_ps(data32bI);
+                __m256 datafloatH = _mm256_cvtepi32_ps(data32bH);
+                // Multiplicamos por el vector de pesos
+                __m256 mulI = _mm256_mul_ps(datafloatI, value);
+                __m256 mulH = _mm256_mul_ps(datafloatH, value);
+                // Sumamos los elementos
+                tot = _mm256_hadd_ps(mulI, mulH);
+                // Redondeamos los valores del vector de su valor a float a integer
+                tot = _mm256_floor_ps(_mm256_hadd_ps(tot, tot)); // tras segundo hadd hemos añadido 4byte por cada pixel
+                // permutamos los valores para que queden en el orden correcto
+                tot = _mm256_permutevar8x32_ps(tot, of);
+                // Convertimos a entero de 32 bits
+                grey = _mm_cvtps_epi32(_mm256_extractf128_ps(tot, 0));
+                // Guardamos los valores en el vector de salida
+                __m128i arr = _mm_setr_epi8(0, 1 * 4, 2 * 4, 3 * 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
             }
         }
 
