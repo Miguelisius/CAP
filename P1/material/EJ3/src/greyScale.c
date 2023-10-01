@@ -10,6 +10,7 @@
 #include <xmmintrin.h>
 #include <immintrin.h>
 
+
 static inline void getRGB(uint8_t *im, int width, int height, int nchannels, int x, int y, int *r, int *g, int *b)
 {
 
@@ -78,9 +79,10 @@ int main(int nargs, char **argv)
         //RGB Scale
 
         __m256 value = _mm256_setr_ps(0.2989f, 0.5870f, 0.1140f, 0.0f, 0.2989f, 0.5870f, 0.1140f, 0.0f);
-        __m256 tot; 
+        __m256 tot;
+        __m256 tot1;
         __m128i grey;
-        __m256 of = _mm256_setr_epi32(0, 4, 1, 5,0,0,0,0);
+        __m256i of = _mm256_setr_epi32(0, 4, 1, 5,0,0,0,0);
         
 
         gettimeofday(&ini,NULL);
@@ -88,12 +90,10 @@ int main(int nargs, char **argv)
         int r, g, b;
         for (int j = 0; j <  height; j++)
         {   
-            
-
             for (int i = 0; i<width; i+=4)
             {
-                __m128i datal = _mm_load1_epi64((__m128i *)(rgb_image + (i + width * j) * 4));
-                __m128i datah = _mm_load1_epi64((__m128i *)(rgb_image + (i + width * j) * 4 + 8));
+                __m128i datal = _mm_loadl_epi64((__m128i *)(rgb_image + (i + width * j) * 4));
+                __m128i datah = _mm_loadl_epi64((__m128i *)(rgb_image + (i + width * j) * 4 + 8));
                 // Convertimos a entero de 32 bits
                 __m256i data32bI = _mm256_cvtepu8_epi32(datal);
                 __m256i data32bH = _mm256_cvtepu8_epi32(datah);
@@ -104,15 +104,28 @@ int main(int nargs, char **argv)
                 __m256 mulI = _mm256_mul_ps(datafloatI, value);
                 __m256 mulH = _mm256_mul_ps(datafloatH, value);
                 // Sumamos los elementos
-                tot = _mm256_hadd_ps(mulI, mulH);
+                tot1 = _mm256_hadd_ps(mulI, mulH);
                 // Redondeamos los valores del vector de su valor a float a integer
-                tot = _mm256_floor_ps(_mm256_hadd_ps(tot, tot)); // tras segundo hadd hemos añadido 4byte por cada pixel
+                tot = _mm256_hadd_ps(tot1, tot1); // tras segundo hadd hemos añadido 4byte por cada pixel
+                
                 // permutamos los valores para que queden en el orden correcto
                 tot = _mm256_permutevar8x32_ps(tot, of);
                 // Convertimos a entero de 32 bits
                 grey = _mm_cvtps_epi32(_mm256_extractf128_ps(tot, 0));
                 // Guardamos los valores en el vector de salida
-                __m128i arr = _mm_setr_epi8(0, 1 * 4, 2 * 4, 3 * 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+                //__m128i arr = _mm_setr_epi8(0, 1 * 4, 2 * 4, 3 * 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+
+                /*grey_image[(j * width) + i] = grey[0];
+                grey_image[(j * width) + i + 1] = grey[1];
+                grey_image[(j * width) + i + 2] = grey[2];
+                grey_image[(j * width) + i + 3] = grey[3];*/
+
+                uint32_t *ptr = (__m128i *)&grey;
+
+                grey_image[(j * width) + i] = ptr[0];
+                grey_image[(j * width) + i + 1] = ptr[1];
+                grey_image[(j * width) + i + 2] = ptr[2];
+                grey_image[(j * width) + i + 3] = ptr[3];
             }
         }
 
