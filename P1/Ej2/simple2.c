@@ -29,6 +29,7 @@ int main(int argc, char *argv[]) {
             fclose(pf);
         return -1;
     }
+    float aux=0;
     /* Perform an operation a number of times */
     for (t=100000; t < NUMBER_OF_TRIALS + 1; t+=100000) {
         gettimeofday(&start_time, NULL); // Obtiene el tiempo de inicio
@@ -37,7 +38,8 @@ int main(int argc, char *argv[]) {
         }
         gettimeofday(&end_time, NULL); // Obtiene el tiempo de finalización
         seconds = ((end_time.tv_sec * 1000000 + end_time.tv_usec) - (start_time.tv_sec * 1000000 + start_time.tv_usec)) * 1.0 / 1000000.0;
-        fprintf(pf, "%f %d\n", seconds, t);
+        aux += seconds;
+        fprintf(pf, "%f %d\n", aux, t);
     }
     fclose(pf);
     printf("c = %f\n", c);
