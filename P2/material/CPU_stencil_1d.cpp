@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <algorithm>
 #include <iostream>
+#include <cuda_runtime.h>
 
 #define RADIOUS 3
 int BLOCK_SIZE = 16;
